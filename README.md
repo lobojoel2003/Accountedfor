@@ -359,16 +359,19 @@ flowchart LR
   L & T --> B[Cross-compile 7 platforms]
   L & T --> D[Docker build +<br/>Compose smoke test]
   B & D & V -->|main only| E[Publish ghcr.io …:edge]
-  R[push tag v*] --> RV[Verify tag + changelog + tests] --> RB[Binaries + SHA256SUMS<br/>+ provenance] & RI[Multi-arch image<br/>+ provenance] --> GR[GitHub Release<br/>notes from CHANGELOG]
+  R[push tag v* or<br/>Run workflow] --> RV[Verify tag + changelog + tests] --> RB[Binaries + SHA256SUMS<br/>+ provenance] & RI[Multi-arch image<br/>+ provenance] --> GR[GitHub Release<br/>notes from CHANGELOG]
 ```
 
 To cut a release, move the `[Unreleased]` notes in `CHANGELOG.md` under a new
-version heading, commit, then:
+version heading and commit to `main`. Then either push a tag:
 
 ```bash
 git tag -a v1.1.0 -m "Accountedfor v1.1.0"
 git push origin v1.1.0
 ```
+
+or open **Actions → Release → Run workflow** on `main` and enter `v1.1.0`; the
+workflow creates the tag on the commit it built and tested.
 
 Verify a downloaded artifact with `sha256sum -c SHA256SUMS` or
 `gh attestation verify <file> --repo lobojoel2003/Accountedfor`.

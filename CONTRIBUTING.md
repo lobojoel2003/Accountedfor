@@ -55,6 +55,8 @@ git tag -a v1.1.0 -m "Accountedfor v1.1.0"
 git push origin v1.1.0
 ```
 
-The release workflow tests the tag, builds binaries and the container image
+(Or run the **Release** workflow from the Actions tab on `main` with the
+version; it creates the tag itself.) The release workflow tests the commit,
+builds binaries and the container image
 (stamped with the version and the CI build number), attests their
 provenance and publishes the GitHub Release with the changelog notes.

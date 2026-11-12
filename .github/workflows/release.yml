@@ -1,23 +1,36 @@
 name: Release
 
-# Pushing a tag such as v1.2.3 (or v1.3.0-rc.1) builds and publishes a
-# release:
+# Publishes a release:
 #   - binaries for Linux, macOS and Windows with SHA256SUMS
 #   - a multi-arch image ghcr.io/<owner>/accountedfor:1.2.3, :1.2, :1, :latest
 #   - build provenance attestations for both
 #   - a GitHub Release whose notes come from CHANGELOG.md
 #
+# Start it either way:
+#   - push a tag:  git tag -a v1.2.3 -m "Accountedfor v1.2.3" && git push origin v1.2.3
+#   - or Actions > Release > Run workflow on main with version "v1.2.3";
+#     the workflow then creates the tag on the commit it built.
+#
 # The workflow run number is stamped into every artifact as the build number.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. v1.2.3 (needs a section in CHANGELOG.md)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.version || github.ref_name }}
   cancel-in-progress: false
+
+env:
+  VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
 jobs:
   verify:
@@ -41,14 +54,24 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
-      - name: Tag is a semantic version with release notes
+      - name: Version is semantic and documented
         run: |
-          tag="${GITHUB_REF_NAME}"
-          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Tag $tag is not a semantic version (vMAJOR.MINOR.PATCH[-PRERELEASE])"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$VERSION is not a semantic version (vMAJOR.MINOR.PATCH[-PRERELEASE])"
             exit 1
           fi
-          scripts/release-notes.sh "$tag" > /dev/null
+          scripts/release-notes.sh "$VERSION" > /dev/null
+      - name: Manual releases come from main and use a new tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run the release workflow on main, not $GITHUB_REF"
+            exit 1
+          fi
+          if [[ -n "$(git ls-remote --tags origin "refs/tags/${VERSION}")" ]]; then
+            echo "::error::Tag ${VERSION} already exists"
+            exit 1
+          fi
       - name: Test
         run: go test -race ./...
 
@@ -69,7 +92,6 @@ jobs:
           go-version: stable
       - name: Build
         env:
-          VERSION: ${{ github.ref_name }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: scripts/build-release.sh
       - name: Attest build provenance
@@ -108,11 +130,12 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
-          flavor: latest=auto
+          flavor: latest=false
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}},value=${{ env.VERSION }}
+            type=raw,value=latest,enable=${{ !contains(env.VERSION, '-') }}
             type=raw,value=build-${{ github.run_number }}
           labels: |
             org.opencontainers.image.title=Accountedfor
@@ -131,7 +154,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ env.VERSION }}
             COMMIT=${{ github.sha }}
             BUILD_NUMBER=${{ github.run_number }}
             BUILD_DATE=${{ steps.date.outputs.now }}
@@ -156,20 +179,18 @@ jobs:
           path: dist
       - name: Write release notes
         env:
-          TAG: ${{ github.ref_name }}
           RUN: ${{ github.run_number }}
           OWNER: ${{ github.repository_owner }}
         run: |
-          version="${TAG#v}"
           {
-            scripts/release-notes.sh "$TAG"
+            scripts/release-notes.sh "$VERSION"
             echo
             echo "## Install"
             echo
             echo "**Docker** (multi-arch: linux/amd64, linux/arm64)"
             echo
             echo '```bash'
-            echo "docker pull ghcr.io/${OWNER}/accountedfor:${version}"
+            echo "docker pull ghcr.io/${OWNER}/accountedfor:${VERSION#v}"
             echo '```'
             echo
             echo "**Docker Compose**: download \`docker-compose.yml\` and \`.env.example\` from any archive below, then \`cp .env.example .env && docker compose up -d\`."
@@ -177,18 +198,22 @@ jobs:
             echo "**Binary**: download the archive for your platform, verify it with \`sha256sum -c SHA256SUMS\` (or \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`), and run \`accountedfor serve\` with \`DATABASE_URL\` set."
             echo
             echo "---"
-            echo "Version \`${TAG}\` · build ${RUN} · commit \`${GITHUB_SHA::7}\`"
+            echo "Version \`${VERSION}\` · build ${RUN} · commit \`${GITHUB_SHA::7}\`"
           } > notes.md
           cat notes.md
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           flags=()
-          if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); else flags+=(--latest); fi
-          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/SHA256SUMS \
-            --verify-tag \
-            --title "Accountedfor ${TAG}" \
+          if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); else flags+=(--latest); fi
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            # Creates the tag on the commit this run built and tested.
+            flags+=(--target "$GITHUB_SHA")
+          else
+            flags+=(--verify-tag)
+          fi
+          gh release create "$VERSION" dist/*.tar.gz dist/*.zip dist/SHA256SUMS \
+            --title "Accountedfor ${VERSION}" \
             --notes-file notes.md \
             "${flags[@]}"
