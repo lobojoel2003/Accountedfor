@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example PFIF 1.2 export in the style of Google Person Finder, using the
+  older field names (first_name, last_name, home_zip, found). All people in
+  this file are fictional.
+  Import it with:  accountedfor import examples/person-finder-1.2.xml
+-->
+<pfif:pfif xmlns:pfif="http://zesty.ca/pfif/1.2">
+  <pfif:person>
+    <pfif:person_record_id>example.personfinder.org/person.1001</pfif:person_record_id>
+    <pfif:entry_date>2026-11-10T08:15:00Z</pfif:entry_date>
+    <pfif:author_name>Grace Okafor</pfif:author_name>
+    <pfif:author_email>grace@example.org</pfif:author_email>
+    <pfif:source_name>Example Person Finder</pfif:source_name>
+    <pfif:source_date>2026-11-10T08:10:00Z</pfif:source_date>
+    <pfif:first_name>Daniel</pfif:first_name>
+    <pfif:last_name>Okafor</pfif:last_name>
+    <pfif:sex>male</pfif:sex>
+    <pfif:age>71</pfif:age>
+    <pfif:home_city>Riverside</pfif:home_city>
+    <pfif:home_zip>92501</pfif:home_zip>
+    <pfif:other>Uses a walker. Speaks English and Igbo.</pfif:other>
+    <pfif:note>
+      <pfif:note_record_id>example.personfinder.org/note.5001</pfif:note_record_id>
+      <pfif:entry_date>2026-11-10T08:15:00Z</pfif:entry_date>
+      <pfif:author_name>Grace Okafor</pfif:author_name>
+      <pfif:source_date>2026-11-10T08:10:00Z</pfif:source_date>
+      <pfif:found>false</pfif:found>
+      <pfif:status>information_sought</pfif:status>
+      <pfif:last_known_location>Oak Street senior apartments</pfif:last_known_location>
+      <pfif:text>Not answering his phone since the river rose. Please check on him.</pfif:text>
+    </pfif:note>
+  </pfif:person>
+  <pfif:person>
+    <pfif:person_record_id>example.personfinder.org/person.1002</pfif:person_record_id>
+    <pfif:entry_date>2026-11-10T09:30:00Z</pfif:entry_date>
+    <pfif:author_name>Shelter volunteer</pfif:author_name>
+    <pfif:source_name>Example Person Finder</pfif:source_name>
+    <pfif:first_name>Mei</pfif:first_name>
+    <pfif:last_name>Chen</pfif:last_name>
+    <pfif:age>29</pfif:age>
+    <pfif:home_city>Riverside</pfif:home_city>
+  </pfif:person>
+  <pfif:note>
+    <pfif:note_record_id>example.personfinder.org/note.5002</pfif:note_record_id>
+    <pfif:person_record_id>example.personfinder.org/person.1002</pfif:person_record_id>
+    <pfif:entry_date>2026-11-10T09:30:00Z</pfif:entry_date>
+    <pfif:author_name>Shelter volunteer</pfif:author_name>
+    <pfif:found>true</pfif:found>
+    <pfif:status>believed_alive</pfif:status>
+    <pfif:last_known_location>Lincoln High School shelter</pfif:last_known_location>
+    <pfif:text>Checked in at the shelter, uninjured.</pfif:text>
+  </pfif:note>
+</pfif:pfif>

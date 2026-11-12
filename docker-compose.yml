@@ -1,0 +1,45 @@
+# Accountedfor + PostgreSQL. Quick start:
+#
+#   cp .env.example .env      # then edit BASE_URL, passwords, event name
+#   docker compose up -d
+#   open http://localhost:8080
+#
+# The app image is pulled from GitHub Container Registry; to build from
+# source instead run:  docker compose up -d --build
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: accountedfor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-please}
+      POSTGRES_DB: accountedfor
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U accountedfor -d accountedfor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: ${ACCOUNTEDFOR_IMAGE:-ghcr.io/lobojoel2003/accountedfor:latest}
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://accountedfor:${POSTGRES_PASSWORD:-change-me-please}@db:5432/accountedfor?sslmode=disable
+    ports:
+      - "${PORT:-8080}:8080"
+
+volumes:
+  pgdata:
