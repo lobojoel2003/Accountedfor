@@ -25,6 +25,10 @@ func TestSplitName(t *testing.T) {
 	if name != "alice" || len(rest) != 1 {
 		t.Errorf("splitName = %q %v", name, rest)
 	}
+	name, rest = splitName([]string{"-", "--visibility", "public"})
+	if name != "-" || len(rest) != 2 {
+		t.Errorf("stdin argument: %q %v", name, rest)
+	}
 	name, rest = splitName([]string{"--admin"})
 	if name != "" || len(rest) != 1 {
 		t.Errorf("splitName = %q %v", name, rest)

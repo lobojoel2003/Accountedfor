@@ -325,8 +325,9 @@ func userCmd(ctx context.Context, st *store.Store, args []string) error {
 }
 
 // splitName takes a leading positional argument so flags may follow it.
+// A lone "-" (standard input) counts as positional.
 func splitName(args []string) (string, []string) {
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+	if len(args) > 0 && (args[0] == "-" || !strings.HasPrefix(args[0], "-")) {
 		return args[0], args[1:]
 	}
 	return "", args
