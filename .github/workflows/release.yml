@@ -1,0 +1,194 @@
+name: Release
+
+# Pushing a tag such as v1.2.3 (or v1.3.0-rc.1) builds and publishes a
+# release:
+#   - binaries for Linux, macOS and Windows with SHA256SUMS
+#   - a multi-arch image ghcr.io/<owner>/accountedfor:1.2.3, :1.2, :1, :latest
+#   - build provenance attestations for both
+#   - a GitHub Release whose notes come from CHANGELOG.md
+#
+# The workflow run number is stamped into every artifact as the build number.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      ACCOUNTEDFOR_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Tag is a semantic version with release notes
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $tag is not a semantic version (vMAJOR.MINOR.PATCH[-PRERELEASE])"
+            exit 1
+          fi
+          scripts/release-notes.sh "$tag" > /dev/null
+      - name: Test
+        run: go test -race ./...
+
+  binaries:
+    name: Binaries
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Build
+        env:
+          VERSION: ${{ github.ref_name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: scripts/build-release.sh
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+      - uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  image:
+    name: Container image
+    runs-on: ubuntu-latest
+    needs: verify
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/accountedfor
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=auto
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=build-${{ github.run_number }}
+          labels: |
+            org.opencontainers.image.title=Accountedfor
+            org.opencontainers.image.licenses=Apache-2.0
+      - name: Build date
+        id: date
+        run: echo "now=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            BUILD_DATE=${{ steps.date.outputs.now }}
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: [binaries, image]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist
+      - name: Write release notes
+        env:
+          TAG: ${{ github.ref_name }}
+          RUN: ${{ github.run_number }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          version="${TAG#v}"
+          {
+            scripts/release-notes.sh "$TAG"
+            echo
+            echo "## Install"
+            echo
+            echo "**Docker** (multi-arch: linux/amd64, linux/arm64)"
+            echo
+            echo '```bash'
+            echo "docker pull ghcr.io/${OWNER}/accountedfor:${version}"
+            echo '```'
+            echo
+            echo "**Docker Compose**: download \`docker-compose.yml\` and \`.env.example\` from any archive below, then \`cp .env.example .env && docker compose up -d\`."
+            echo
+            echo "**Binary**: download the archive for your platform, verify it with \`sha256sum -c SHA256SUMS\` (or \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`), and run \`accountedfor serve\` with \`DATABASE_URL\` set."
+            echo
+            echo "---"
+            echo "Version \`${TAG}\` · build ${RUN} · commit \`${GITHUB_SHA::7}\`"
+          } > notes.md
+          cat notes.md
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flags=()
+          if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/SHA256SUMS \
+            --verify-tag \
+            --title "Accountedfor ${TAG}" \
+            --notes-file notes.md \
+            "${flags[@]}"

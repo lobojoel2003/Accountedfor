@@ -1,0 +1,212 @@
+name: CI
+
+# Runs on every push and pull request. Pushes to main also publish the
+# container image ghcr.io/<owner>/accountedfor:edge (continuous delivery).
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  STATICCHECK_VERSION: v0.8.2
+  GOVULNCHECK_VERSION: v1.9.0
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files need gofmt -w: $unformatted"
+            exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION} ./...
+      - name: go.mod is tidy
+        run: go mod tidy -diff
+      - name: Shell scripts
+        run: shellcheck scripts/*.sh
+
+  test:
+    name: Test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: [stable, oldstable]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      ACCOUNTEDFOR_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Test with race detector and coverage
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+      - name: Coverage summary
+        if: matrix.go == 'stable'
+        run: |
+          total="$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}')"
+          {
+            echo "### Test coverage: ${total}"
+            echo
+            echo '```'
+            go tool cover -func=coverage.out | sort -k3 -t$'\t' | tail -25
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Page weight budget
+        if: matrix.go == 'stable'
+        run: go test -run TestHomePageWeightAndSafety -v ./internal/web | grep -E "home page:|ok|FAIL" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v6
+        if: matrix.go == 'stable'
+        with:
+          name: coverage
+          path: coverage.out
+          retention-days: 14
+
+  vulncheck:
+    name: Vulnerability check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
+
+  build:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Build all platforms
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: scripts/build-release.sh
+      - name: Smoke test the Linux binary
+        run: |
+          tar -xzf dist/*_linux_amd64.tar.gz -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP"/accountedfor_*_linux_amd64/accountedfor version
+      - uses: actions/upload-artifact@v6
+        with:
+          name: binaries-build-${{ github.run_number }}
+          path: dist/
+          retention-days: 7
+
+  docker:
+    name: Container image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: accountedfor:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=ci-${{ github.run_number }}
+            COMMIT=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+      - name: Smoke test with Docker Compose
+        env:
+          ACCOUNTEDFOR_IMAGE: accountedfor:ci
+          POSTGRES_PASSWORD: ci-password
+        run: |
+          docker compose up -d --no-build --wait --wait-timeout 120
+          curl -fsS http://localhost:8080/healthz
+          curl -fsS http://localhost:8080/version
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)"
+          test "$code" = 200
+          size="$(curl -s -H 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}' http://localhost:8080/)"
+          echo "Home page over the wire: ${size} bytes (gzip)" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$size" -lt 5120
+          docker compose exec -T app accountedfor user add ci-admin --admin
+          docker compose exec -T app accountedfor import - < examples/person-finder-1.2.xml
+          curl -fsS "http://localhost:8080/search?q=okafor" | grep -q "Daniel Okafor"
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color || true
+
+  publish-edge:
+    name: Publish edge image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [test, vulncheck, build, docker]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/accountedfor
+          tags: |
+            type=edge,branch=main
+            type=sha,prefix=sha-
+            type=raw,value=build-${{ github.run_number }}
+      - name: Build date
+        id: date
+        run: echo "now=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=edge
+            COMMIT=${{ github.sha }}
+            BUILD_NUMBER=${{ github.run_number }}
+            BUILD_DATE=${{ steps.date.outputs.now }}

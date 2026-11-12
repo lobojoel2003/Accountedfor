@@ -1,0 +1,41 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Do not include real names or phone numbers of people from a live board.**
+        Security problems: please use private vulnerability reporting instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Post ...
+        3. See ...
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From the page footer, `/version` or `accountedfor version`.
+      placeholder: v1.0.0 (build 12)
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Public pages, SMS, Responder dashboard, PFIF import/export, Docker / deployment, Other]
+  - type: textarea
+    id: device
+    attributes:
+      label: Device, browser or SMS gateway
