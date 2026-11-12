@@ -1,0 +1,12 @@
+{{define "content"}}
+<h1>{{t "r.login_title"}}</h1>
+<p class="muted">{{t "r.login_intro"}}</p>
+{{template "errors" .}}
+<form method="post" action="/responders/login" class="card">
+<label for="username">{{t "r.username"}}</label>
+<input id="username" name="username" value="{{.Username}}" required maxlength="40" autocomplete="username" autocapitalize="none">
+<label for="password">{{t "r.password"}}</label>
+<input id="password" name="password" type="password" required maxlength="200" autocomplete="current-password">
+<button type="submit">{{t "r.login"}}</button>
+</form>
+{{end}}

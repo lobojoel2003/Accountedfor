@@ -1,0 +1,113 @@
+{{define "content"}}
+{{with .View}}
+<p>{{template "badge" .}}</p>
+<h1>{{.P.FullName}}</h1>
+<p class="muted">{{t .StatusKey}} · <time datetime="{{iso .P.UpdatedAt}}">{{ago .P.UpdatedAt}}</time></p>
+{{if .P.Hidden}}<p class="flash err">{{t "person.hidden_notice"}}</p>{{end}}
+{{if eq .Category "contact"}}<p class="card">{{t "person.contact_responders"}}</p>{{end}}
+
+{{if .ShowDetails}}
+{{if or .P.Age .P.HomeArea .P.Description .P.AlternateNames .P.Sex}}
+<dl>
+{{if .P.AlternateNames}}<dt>{{t "person.alternate_names"}}</dt><dd>{{.P.AlternateNames}}</dd>{{end}}
+{{if .P.Age}}<dt>{{t "person.age"}}</dt><dd>{{.P.Age}}</dd>{{end}}
+{{if .P.Sex}}<dt>{{t "person.sex"}}</dt><dd>{{t (print "sex." .P.Sex)}}</dd>{{end}}
+{{if .P.HomeArea}}<dt>{{t "person.home"}}</dt><dd>{{.P.HomeArea}}</dd>{{end}}
+{{if .P.Description}}<dt>{{t "person.description"}}</dt><dd class="quote">{{.P.Description}}</dd>{{end}}
+</dl>
+{{end}}
+{{else}}
+<p class="card muted">{{t "person.limited_notice"}}</p>
+{{end}}
+
+{{if .Full}}
+<section class="card">
+<h2>{{t "r.record"}}</h2>
+<dl>
+<dt>{{t "r.visibility"}}</dt><dd>{{t (visKey .P.Visibility)}}</dd>
+<dt>{{t "r.origin"}}</dt><dd>{{.P.Origin}}{{if .P.SourceName}} · {{.P.SourceName}}{{end}}</dd>
+{{if .P.AuthorName}}<dt>{{t "r.author"}}</dt><dd>{{.P.AuthorName}}</dd>{{end}}
+{{if .P.AuthorPhone}}<dt>{{t "r.phone"}}</dt><dd><a href="tel:{{.P.AuthorPhone}}">{{.P.AuthorPhone}}</a></dd>{{end}}
+{{if .P.AuthorEmail}}<dt>{{t "r.email"}}</dt><dd><a href="mailto:{{.P.AuthorEmail}}">{{.P.AuthorEmail}}</a></dd>{{end}}
+{{if .P.HomeStreet}}<dt>{{t "r.street"}}</dt><dd>{{.P.HomeStreet}} {{.P.HomePostalCode}}</dd>{{end}}
+{{if .P.DateOfBirth}}<dt>{{t "r.dob"}}</dt><dd>{{.P.DateOfBirth}}</dd>{{end}}
+<dt>{{t "r.entered"}}</dt><dd>{{date .P.EntryDate}}</dd>
+{{if .P.ExpiryDate}}<dt>{{t "r.expires"}}</dt><dd>{{date .P.ExpiryDate}}</dd>{{end}}
+<dt>PFIF</dt><dd class="key">{{.P.RecordID}}</dd>
+</dl>
+</section>
+{{end}}
+
+<h2>{{t "person.updates"}}</h2>
+{{if .Notes}}
+<ol class="notes">
+{{range .Notes}}<li class="{{.Category}}">
+<b>{{t .StatusKey}}</b> <small>· <time datetime="{{iso .N.Date}}">{{date .N.Date}}</time>{{if .ShowText}}{{if .N.AuthorName}} · {{tf "person.by" .N.AuthorName}}{{end}}{{end}}</small>
+{{if .ShowText}}
+{{if .N.LastKnownLocation}}<p><small>{{t "note.where"}}</small> {{.N.LastKnownLocation}}</p>{{end}}
+{{if .N.Text}}<p>{{.N.Text}}</p>{{end}}
+{{if .Linked}}<p><a href="/p/{{.Linked.PublicID}}">{{tf "person.linked" .Linked.FullName}}</a></p>{{end}}
+{{end}}
+{{if $.User}}
+{{if .N.Private}}<small class="badge">{{t "r.private_note"}}</small>{{end}}
+{{if .N.Hidden}}<small class="badge missing">{{t "r.hidden"}}</small>{{end}}
+{{if .N.AuthorPhone}}<small>{{t "r.phone"}}: <a href="tel:{{.N.AuthorPhone}}">{{.N.AuthorPhone}}</a></small>{{end}}
+{{if .N.AuthorEmail}}<small>{{t "r.email"}}: <a href="mailto:{{.N.AuthorEmail}}">{{.N.AuthorEmail}}</a></small>{{end}}
+{{if .N.PhoneOfFoundPerson}}<small>{{t "r.found_phone"}} {{.N.PhoneOfFoundPerson}}</small>{{end}}
+<form method="post" action="/responders/notes/{{.N.ID}}/{{if .N.Hidden}}unhide{{else}}hide{{end}}" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="alt sm" type="submit">{{if .N.Hidden}}{{t "r.unhide"}}{{else}}{{t "r.hide"}}{{end}}</button></form>
+{{end}}
+</li>
+{{end}}
+</ol>
+{{else}}<p class="muted">{{t "person.no_updates"}}</p>{{end}}
+{{end}}
+
+{{if .Added}}<p class="flash" role="status">{{t "person.note_added"}}</p>{{end}}
+
+<section class="card" id="news">
+<h2>{{tf "person.news_title" .View.P.FullName}}</h2>
+{{template "errors" .}}
+<form method="post" action="/p/{{.View.P.PublicID}}/notes">
+<fieldset>
+<legend>{{t "note.status_legend"}}</legend>
+<label class="opt"><input type="radio" name="status" value="is_note_author"{{if eq .Form.Status "is_note_author"}} checked{{end}}><b>{{t "note.is_me"}}</b><span>{{t "note.is_me_help"}}</span></label>
+<label class="opt"><input type="radio" name="status" value="believed_alive"{{if eq .Form.Status "believed_alive"}} checked{{end}}><b>{{t "note.alive"}}</b><span>{{t "note.alive_help"}}</span></label>
+<label class="opt"><input type="radio" name="status" value="information_sought"{{if eq .Form.Status "information_sought"}} checked{{end}}><b>{{t "note.seeking"}}</b><span>{{t "note.seeking_help"}}</span></label>
+<label class="opt"><input type="radio" name="status" value=""{{if eq .Form.Status ""}} checked{{end}}><b>{{t "note.info"}}</b><span>{{t "note.info_help"}}</span></label>
+{{if .User}}<label class="opt"><input type="radio" name="status" value="believed_dead"><b>{{t "note.dead"}}</b><span>{{t "note.dead_help"}}</span></label>{{end}}
+</fieldset>
+<label for="text">{{t "note.text"}}</label>
+<textarea id="text" name="text" maxlength="1000">{{.Form.Text}}</textarea>
+<label for="location">{{t "note.location"}}</label>
+<input id="location" name="location" value="{{.Form.Location}}" maxlength="200">
+<label for="author">{{t "note.author"}}</label>
+<input id="author" name="author" value="{{.Form.Author}}" maxlength="120" autocomplete="name"{{if not .User}} required{{end}}>
+<label for="contact">{{t "form.contact"}}</label>
+<input id="contact" name="contact" value="{{.Form.Contact}}" maxlength="120">
+<small>{{t "form.contact_help"}}</small>
+<label class="check"><input type="checkbox" name="private" value="1"{{if .Form.Private}} checked{{end}}> {{t "note.private"}}</label>
+{{template "honeypot"}}
+{{if .User}}<input type="hidden" name="csrf" value="{{.CSRF}}">{{end}}
+<button type="submit">{{t "note.submit"}}</button>
+</form>
+</section>
+
+{{if .User}}
+<section class="card">
+<h2>{{t "r.moderate"}}</h2>
+<form method="post" action="/responders/person/{{.View.P.PublicID}}/visibility" class="row">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<div><label for="vis">{{t "r.visibility"}}</label>
+<select id="vis" name="visibility">
+<option value="public"{{if eq (print .View.P.Visibility) "public"}} selected{{end}}>{{t "vis.public"}}</option>
+<option value="limited"{{if eq (print .View.P.Visibility) "limited"}} selected{{end}}>{{t "vis.limited"}}</option>
+<option value="private"{{if eq (print .View.P.Visibility) "private"}} selected{{end}}>{{t "vis.private"}}</option>
+</select></div>
+<button class="alt" type="submit">{{t "r.save"}}</button>
+</form>
+<form method="post" action="/responders/person/{{.View.P.PublicID}}/{{if .View.P.Hidden}}unhide{{else}}hide{{end}}" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="alt" type="submit">{{if .View.P.Hidden}}{{t "r.unhide_record"}}{{else}}{{t "r.hide_record"}}{{end}}</button></form>
+<form method="post" action="/responders/person/{{.View.P.PublicID}}/delete"><input type="hidden" name="csrf" value="{{.CSRF}}"><label class="check"><input type="checkbox" name="confirm" value="1" required> {{t "r.delete_confirm"}}</label><button class="danger" type="submit">{{t "r.delete_record"}}</button></form>
+<p><small>{{t "r.delete_help"}}</small></p>
+</section>
+{{end}}
+{{end}}

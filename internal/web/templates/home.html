@@ -1,0 +1,23 @@
+{{define "content"}}
+<h1>{{t "home.title"}}</h1>
+<p class="lead">{{t "home.lead"}}</p>
+<a class="btn-safe" href="/safe">{{template "check"}}{{t "home.safe_button"}}</a>
+<p class="muted">{{t "home.safe_hint"}}</p>
+
+<section class="card">
+<h2>{{t "home.find_title"}}</h2>
+{{template "searchform" ""}}
+<p><a href="/missing">{{t "home.report_missing"}}</a></p>
+</section>
+
+{{if .SMSNumber}}
+<section class="card">
+<h2>{{t "home.sms_title"}}</h2>
+<p>{{tf "home.sms_safe" .SMSNumber}}</p>
+<p>{{t "home.sms_find"}}</p>
+<p><a href="sms:{{phone .SMSNumber}}?body=SAFE%20">{{t "home.sms_open"}}</a></p>
+</section>
+{{end}}
+
+{{if .Stats.Total}}<p class="stats">{{tn "home.stats_safe" .Stats.Safe}} · {{tn "home.stats_missing" .Stats.Missing}}</p>{{end}}
+{{end}}

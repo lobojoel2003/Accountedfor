@@ -1,0 +1,32 @@
+{{define "content"}}
+<h1>{{t "r.data_title"}}</h1>
+{{template "rnav" .}}
+<section class="card">
+<h2>{{t "r.export_title"}}</h2>
+<p class="muted">{{t "r.export_intro"}}</p>
+<p><a class="btn" href="/responders/export.csv">{{t "r.export_csv"}}</a> <a class="btn alt" href="/responders/export.xml">{{t "r.export_pfif"}}</a></p>
+{{if .PublicFeed}}<p><small>{{t "r.public_feed"}} <a class="key" href="/pfif.xml">{{.BaseURL}}/pfif.xml</a></small></p>{{end}}
+<p><small>{{t "r.api_hint"}} <span class="key">GET {{.BaseURL}}/api/v1/pfif?since=2026-01-01T00:00:00Z</span></small></p>
+</section>
+
+{{if .User.IsAdmin}}
+<section class="card">
+<h2>{{t "r.import_title"}}</h2>
+<p class="muted">{{t "r.import_intro"}}</p>
+{{if .Result}}<div class="flash" role="status"><p><b>{{.Result.Summary}}</b></p>{{range .Result.Problems}}<p><small>{{.}}</small></p>{{end}}</div>{{end}}
+{{template "errors" .}}
+<form method="post" action="/responders/import" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label for="file">{{t "r.import_file"}}</label>
+<input id="file" name="file" type="file" accept=".xml,application/xml,text/xml" required>
+<label for="visibility">{{t "r.import_visibility"}}</label>
+<select id="visibility" name="visibility">
+<option value="limited">{{t "vis.limited"}}</option>
+<option value="public">{{t "vis.public"}}</option>
+<option value="private">{{t "vis.private"}}</option>
+</select>
+<button type="submit">{{t "r.import_submit"}}</button>
+</form>
+</section>
+{{end}}
+{{end}}

@@ -1,0 +1,9 @@
+{{define "content"}}
+<h1>{{t "r.audit_title"}}</h1>
+{{template "rnav" .}}
+<p class="muted">{{t "r.audit_intro"}}</p>
+<div class="scroll"><table>
+<thead><tr><th>{{t "r.when"}}</th><th>{{t "r.who"}}</th><th>{{t "r.action"}}</th><th>{{t "r.detail"}}</th></tr></thead>
+<tbody>{{range .Entries}}<tr><td><small>{{date .At}}</small></td><td>{{.Actor}}</td><td><b>{{.Action}}</b></td><td><small>{{.Detail}}</small></td></tr>{{else}}<tr><td colspan="4" class="muted">—</td></tr>{{end}}</tbody>
+</table></div>
+{{end}}

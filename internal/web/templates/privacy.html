@@ -1,0 +1,22 @@
+{{define "content"}}
+<h1>{{t "privacy.title"}}</h1>
+<p class="lead">{{t "privacy.lead"}}</p>
+<section class="card">
+<h2>{{t "privacy.who_title"}}</h2>
+<div class="scroll"><table>
+<thead><tr><th></th><th>{{t "vis.public"}}</th><th>{{t "vis.limited"}}</th><th>{{t "vis.private"}}</th></tr></thead>
+<tbody>
+<tr><th>{{t "privacy.row_name"}}</th><td>{{t "privacy.anyone"}}</td><td>{{t "privacy.anyone"}}</td><td>{{t "privacy.responders"}}</td></tr>
+<tr><th>{{t "privacy.row_message"}}</th><td>{{t "privacy.anyone"}}</td><td>{{t "privacy.responders"}}</td><td>{{t "privacy.responders"}}</td></tr>
+<tr><th>{{t "privacy.row_contact"}}</th><td>{{t "privacy.responders"}}</td><td>{{t "privacy.responders"}}</td><td>{{t "privacy.responders"}}</td></tr>
+</tbody></table></div>
+<p>{{t "privacy.contact_never"}}</p>
+</section>
+<section class="card"><h2>{{t "privacy.search_title"}}</h2><p>{{t "privacy.search_text"}}</p></section>
+<section class="card"><h2>{{t "privacy.keep_title"}}</h2>
+<p>{{if .RetentionDays}}{{tf "privacy.keep_days" .RetentionDays}}{{else}}{{t "privacy.keep_forever"}}{{end}}</p>
+<p>{{t "privacy.remove_text"}}</p></section>
+<section class="card"><h2>{{t "privacy.share_title"}}</h2><p>{{t "privacy.share_text"}}</p></section>
+<section class="card"><h2>{{t "privacy.dignity_title"}}</h2><p>{{t "privacy.dignity_text"}}</p></section>
+{{if or .Operator .OperatorContact}}<section class="card"><h2>{{t "privacy.operator_title"}}</h2><p>{{.Operator}}{{if .OperatorContact}} · {{.OperatorContact}}{{end}}</p></section>{{end}}
+{{end}}

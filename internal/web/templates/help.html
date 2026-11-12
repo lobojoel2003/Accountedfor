@@ -1,0 +1,21 @@
+{{define "content"}}
+<h1>{{t "help.title"}}</h1>
+<section class="card"><h2>{{t "help.safe_title"}}</h2><p>{{t "help.safe_text"}}</p><p><a class="btn go" href="/safe">{{t "home.safe_button"}}</a></p></section>
+<section class="card"><h2>{{t "help.find_title"}}</h2><p>{{t "help.find_text"}}</p></section>
+<section class="card"><h2>{{t "help.missing_title"}}</h2><p>{{t "help.missing_text"}}</p></section>
+<section class="card" id="sms">
+<h2>{{t "help.sms_title"}}</h2>
+{{if .SMSNumber}}<p>{{tf "help.sms_number" .SMSNumber}}</p>{{else}}<p class="muted">{{t "help.sms_none"}}</p>{{end}}
+<dl>
+<dt><b>SAFE</b> {{t "help.sms_name"}}</dt><dd>{{t "help.sms_safe"}}</dd>
+<dt><b>SAFE PRIVATE</b> {{t "help.sms_name"}}</dt><dd>{{t "help.sms_safe_private"}}</dd>
+<dt><b>FIND</b> {{t "help.sms_name"}}</dt><dd>{{t "help.sms_find"}}</dd>
+<dt><b>MISSING</b> {{t "help.sms_name"}}</dt><dd>{{t "help.sms_missing"}}</dd>
+<dt><b>DELETE</b></dt><dd>{{t "help.sms_delete"}}</dd>
+<dt><b>HELP</b></dt><dd>{{t "help.sms_help"}}</dd>
+</dl>
+<p class="muted">{{t "help.sms_example"}}</p>
+<p class="muted">{{t "help.sms_spanish"}}</p>
+</section>
+<section class="card"><h2>{{t "help.responders_title"}}</h2><p>{{t "help.responders_text"}}</p></section>
+{{end}}

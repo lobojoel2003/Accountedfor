@@ -1,0 +1,42 @@
+{{define "content"}}
+<h1>{{t "edit.title"}}</h1>
+<p class="muted">{{tf "edit.intro" .P.FullName}}</p>
+{{if .Saved}}<p class="flash" role="status">{{t "edit.saved"}}</p>{{end}}
+{{template "errors" .}}
+
+<form method="post" action="/p/{{.P.PublicID}}/edit" class="card">
+<input type="hidden" name="key" value="{{.Key}}">
+<input type="hidden" name="action" value="save">
+<label for="name">{{t "edit.name"}}</label>
+<input id="name" name="name" value="{{.P.FullName}}" required maxlength="120">
+{{template "visibility" .Vis}}
+<button type="submit">{{t "edit.save"}}</button>
+</form>
+
+<form method="post" action="/p/{{.P.PublicID}}/edit" class="card">
+<h2>{{t "edit.update_title"}}</h2>
+<input type="hidden" name="key" value="{{.Key}}">
+<input type="hidden" name="action" value="update">
+{{if eq .P.Status "missing"}}
+<fieldset>
+<label class="opt"><input type="radio" name="status" value="information_sought" checked><b>{{t "edit.still_looking"}}</b><span>{{t "edit.still_looking_help"}}</span></label>
+<label class="opt"><input type="radio" name="status" value="believed_alive"><b>{{t "edit.found"}}</b><span>{{t "edit.found_help"}}</span></label>
+</fieldset>
+{{else}}<input type="hidden" name="status" value="{{.P.PFIFStatus}}">{{end}}
+<label for="text">{{t "edit.update_text"}}</label>
+<textarea id="text" name="text" maxlength="1000" required></textarea>
+<label for="location">{{t "note.location"}}</label>
+<input id="location" name="location" maxlength="200">
+<button type="submit">{{t "edit.post_update"}}</button>
+</form>
+
+<form method="post" action="/p/{{.P.PublicID}}/edit" class="card">
+<h2>{{t "edit.remove_title"}}</h2>
+<p>{{t "edit.remove_text"}}</p>
+<input type="hidden" name="key" value="{{.Key}}">
+<input type="hidden" name="action" value="delete">
+<label class="check"><input type="checkbox" name="confirm" value="1" required> {{t "edit.remove_confirm"}}</label>
+<button class="danger" type="submit">{{t "edit.remove"}}</button>
+</form>
+<p><a href="/p/{{.P.PublicID}}">{{t "edit.view"}}</a></p>
+{{end}}

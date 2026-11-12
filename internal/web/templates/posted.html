@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="done" role="status">
+{{if .Missing}}<h1>{{t "posted.missing_title"}}</h1><p>{{t "posted.missing_text"}}</p>
+{{else}}<h1>{{t "posted.safe_title"}}</h1><p>{{tn "posted.safe_text" (len .People)}}</p>{{end}}
+</div>
+
+{{range $g := .Matches}}
+<section class="card">
+<h2>{{tf "posted.match_title" $g.Safe.FullName}}</h2>
+<p class="muted">{{if $g.Self}}{{t "posted.match_text"}}{{else}}{{t "posted.match_text_them"}}{{end}}</p>
+<ul class="list">
+{{range $g.Missing}}<li>
+<a href="/p/{{.PublicID}}"><b>{{.FullName}}</b> <small>{{tf "posted.match_reported" (ago .EntryDate)}}{{if and (eq (print .Visibility) "public") .HomeCity}} · {{.HomeCity}}{{end}}</small></a>
+<form method="post" action="/p/{{.PublicID}}/me" class="inline">
+<input type="hidden" name="safe" value="{{$g.Safe.PublicID}}">
+<input type="hidden" name="key" value="{{$.Key}}">
+<button class="go sm" type="submit">{{if $g.Self}}{{t "posted.match_me"}}{{else}}{{t "posted.match_them"}}{{end}}</button>
+</form>
+</li>{{end}}
+</ul>
+</section>
+{{end}}
+
+<section class="card">
+<h2>{{t "posted.who"}}</h2>
+<ul class="list">
+{{range .People}}<li><a href="/p/{{.P.PublicID}}">{{template "badge" .}} <b>{{.P.FullName}}</b> <small>{{t (visKey .P.Visibility)}}</small></a></li>
+{{end}}
+</ul>
+</section>
+
+{{if .Key}}
+<section class="card">
+<h2>{{t "posted.key_title"}}</h2>
+<p>{{t "posted.key_text"}}</p>
+{{range .People}}<p>{{.P.FullName}}:<br><a class="key" href="/p/{{.P.PublicID}}/edit?key={{$.Key}}">{{$.BaseURL}}/p/{{.P.PublicID}}/edit?key={{$.Key}}</a></p>
+{{end}}
+<p><small>{{t "posted.key_warning"}}</small></p>
+</section>
+{{end}}
+
+
+<p><a class="btn alt" href="/">{{t "nav.home"}}</a></p>
+{{end}}

@@ -1,0 +1,46 @@
+{{define "content"}}
+<h1>{{t "r.dashboard_title"}}</h1>
+{{template "rnav" .}}
+{{if .Flash}}<p class="flash" role="status">{{.Flash}}</p>{{end}}
+<div class="tiles">
+<a class="tile" href="/responders?status=safe"><b>{{.Stats.Safe}}</b>{{t "r.tile_safe"}}</a>
+<a class="tile" href="/responders?status=missing"><b>{{.Stats.Missing}}</b>{{t "r.tile_missing"}}</a>
+<a class="tile" href="/responders/matches"><b>{{.MatchCount}}</b>{{t "r.tile_matches"}}</a>
+<div class="tile"><b>{{.Stats.Last24h}}</b>{{t "r.tile_24h"}}</div>
+<div class="tile"><b>{{.Stats.Total}}</b>{{t "r.tile_total"}}</div>
+<a class="tile" href="/responders?hidden=1"><b>{{.Stats.Hidden}}</b>{{t "r.tile_hidden"}}</a>
+</div>
+
+<form method="get" action="/responders" class="card row">
+<div><label for="q">{{t "search.label"}}</label><input id="q" name="q" value="{{.Filter.Query}}" maxlength="120"></div>
+<div><label for="status">{{t "r.status"}}</label><select id="status" name="status">
+<option value="">{{t "r.any"}}</option>
+{{range $v := .Statuses}}<option value="{{$v}}"{{if eq $v $.Filter.Status}} selected{{end}}>{{t (print "badge." $v)}}</option>{{end}}
+</select></div>
+<div><label for="vis">{{t "r.visibility"}}</label><select id="vis" name="visibility">
+<option value="">{{t "r.any"}}</option>
+{{range $v := .Visibilities}}<option value="{{$v}}"{{if eq $v $.Filter.Visibility}} selected{{end}}>{{t (visKey $v)}}</option>{{end}}
+</select></div>
+<div><label for="origin">{{t "r.origin"}}</label><select id="origin" name="origin">
+<option value="">{{t "r.any"}}</option>
+{{range $v := .Origins}}<option value="{{$v}}"{{if eq $v $.Filter.Origin}} selected{{end}}>{{t (print "origin." $v)}}</option>{{end}}
+</select></div>
+{{if .Filter.HiddenOnly}}<input type="hidden" name="hidden" value="1">{{end}}
+<button type="submit">{{t "r.filter"}}</button>
+</form>
+
+<p class="muted">{{tn "r.showing" .Total}}{{if .Filter.HiddenOnly}} · {{t "r.hidden_only"}} <a href="/responders">{{t "r.clear"}}</a>{{end}}</p>
+<div class="scroll"><table>
+<thead><tr><th>{{t "r.name"}}</th><th>{{t "r.status"}}</th><th>{{t "r.latest"}}</th><th>{{t "r.visibility"}}</th><th>{{t "r.origin"}}</th><th>{{t "r.updated"}}</th></tr></thead>
+<tbody>
+{{range .Rows}}<tr>
+<td><a href="/p/{{.P.PublicID}}"><b>{{.P.FullName}}</b></a>{{if .P.Age}} <small>({{.P.Age}})</small>{{end}}{{if .P.Hidden}} <span class="badge missing">{{t "r.hidden"}}</span>{{end}}{{if .P.HasContact}}<br><small>{{if .P.AuthorPhone}}{{.P.AuthorPhone}} {{end}}{{.P.AuthorEmail}}</small>{{end}}</td>
+<td>{{template "badge" .}}</td>
+<td><small>{{.Message}}</small></td>
+<td><small>{{t (visKey .P.Visibility)}}</small></td>
+<td><small>{{t (print "origin." .P.Origin)}}</small></td>
+<td><small><time datetime="{{iso .P.UpdatedAt}}">{{ago .P.UpdatedAt}}</time></small></td>
+</tr>{{else}}<tr><td colspan="6" class="muted">{{t "r.no_records"}}</td></tr>{{end}}
+</tbody></table></div>
+<p>{{if .PrevURL}}<a class="btn alt sm" href="{{.PrevURL}}">← {{t "r.prev"}}</a>{{end}} {{if .NextURL}}<a class="btn alt sm" href="{{.NextURL}}">{{t "r.next"}} →</a>{{end}}</p>
+{{end}}

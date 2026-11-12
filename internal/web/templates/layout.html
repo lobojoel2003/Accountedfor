@@ -1,0 +1,61 @@
+{{define "layout" -}}
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{if .Title}}{{.Title}} · {{end}}{{.Site}}</title>
+{{if .NoIndex}}<meta name="robots" content="noindex,nofollow">
+{{else}}<meta name="description" content="{{t "meta.description"}}">
+{{end -}}
+<meta name="theme-color" content="#0b6e4f">
+<link rel="icon" href="{{.Favicon}}">
+<style>{{.CSS}}</style>
+</head>
+<body{{if .Wide}} class="wide"{{end}}>
+{{if .Notice}}<div class="notice" role="status">{{.Notice}}</div>
+{{end -}}
+<header class="top">
+<a class="brand" href="/">{{template "logo"}}{{.Site}}</a>
+{{if .Event}}<span class="event">{{.Event}}</span>{{end}}
+{{if .User}}<a href="/responders">{{t "nav.dashboard"}}</a>{{end}}
+</header>
+<main id="main">
+{{template "content" .}}
+</main>
+<footer>
+<nav aria-label="{{t "nav.more"}}"><a href="/help">{{t "nav.help"}}</a><a href="/privacy">{{t "nav.privacy"}}</a>{{if .User}}<a href="/responders">{{t "nav.dashboard"}}</a>{{else}}<a href="/responders/login">{{t "nav.responders"}}</a>{{end}}</nav>
+<nav aria-label="{{t "nav.language"}}">{{range .LangLinks}}{{if .Current}}<b>{{.Name}}</b>{{else}}<a href="{{.URL}}" hreflang="{{.Code}}" lang="{{.Code}}">{{.Name}}</a>{{end}}{{end}}</nav>
+<p>{{t "footer.not_emergency"}}{{if .Operator}} {{tf "footer.operated_by" .Operator}}{{end}}</p>
+<p><small>{{.Site}} {{.Version}} · {{tf "footer.build" .Build}} · <a href="https://github.com/lobojoel2003/Accountedfor">{{t "footer.source"}}</a></small></p>
+</footer>
+</body>
+</html>
+{{- end}}
+
+{{define "logo"}}<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#0b6e4f"/><path d="M9 16.5l4.6 4.6L23.2 11" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+
+{{define "check"}}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+
+{{define "visibility"}}
+<fieldset>
+<legend>{{t "vis.legend"}}</legend>
+<label class="opt"><input type="radio" name="visibility" value="public"{{if eq .Visibility "public"}} checked{{end}}><b>{{t "vis.public"}}</b><span>{{t .PublicHelp}}</span></label>
+<label class="opt"><input type="radio" name="visibility" value="limited"{{if eq .Visibility "limited"}} checked{{end}}><b>{{t "vis.limited"}}</b><span>{{t .LimitedHelp}}</span></label>
+<label class="opt"><input type="radio" name="visibility" value="private"{{if eq .Visibility "private"}} checked{{end}}><b>{{t "vis.private"}}</b><span>{{t "vis.private_help"}}</span></label>
+</fieldset>
+{{end}}
+
+{{define "honeypot"}}<div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>{{end}}
+
+{{define "errors"}}{{if .Errors}}<div class="flash err" role="alert">{{range .Errors}}<p>{{t .}}</p>{{end}}</div>{{end}}{{end}}
+
+{{define "badge"}}<span class="badge {{.Category}}">{{t .BadgeKey}}</span>{{end}}
+
+{{define "searchform"}}
+<form class="search" action="/search" method="get" role="search">
+<label class="hp" for="q">{{t "search.label"}}</label>
+<input id="q" name="q" value="{{.}}" placeholder="{{t "search.placeholder"}}" minlength="2" maxlength="120" required autocomplete="off">
+<button type="submit">{{t "search.button"}}</button>
+</form>
+{{end}}

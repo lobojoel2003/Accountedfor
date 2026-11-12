@@ -1,0 +1,24 @@
+{{define "content"}}
+<h1>{{t "search.title"}}</h1>
+{{template "searchform" .Query}}
+{{if .Query}}
+{{if .TooShort}}<p class="flash err">{{t "search.too_short"}}</p>
+{{else if .Results}}
+<p class="muted">{{tn "search.count" (len .Results)}}</p>
+<ul class="list">
+{{range .Results}}<li><a href="/p/{{.P.PublicID}}"><b>{{.P.FullName}}</b> {{template "badge" .}}
+<small>{{t .StatusKey}} · {{ago .P.UpdatedAt}}</small>
+{{if .Message}}<q>{{.Message}}</q>{{end}}</a></li>
+{{end}}
+</ul>
+<p class="muted">{{t "search.not_listed"}} <a href="/missing?name={{.Query}}">{{t "search.report"}}</a></p>
+{{else}}
+<div class="card">
+<p><b>{{tf "search.none" .Query}}</b></p>
+<p>{{t "search.none_help"}}</p>
+<p><a class="btn" href="/missing?name={{.Query}}">{{t "search.report"}}</a></p>
+</div>
+{{end}}
+{{end}}
+<p class="muted">{{t "search.privacy"}}</p>
+{{end}}

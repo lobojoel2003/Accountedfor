@@ -1,0 +1,48 @@
+{{define "content"}}
+<h1>{{t "r.users_title"}}</h1>
+{{template "rnav" .}}
+{{if .Flash}}<p class="flash" role="status">{{.Flash}}</p>{{end}}
+{{if .Secret}}<div class="flash" role="status"><p>{{.SecretLabel}}</p><p class="key"><b>{{.Secret}}</b></p><p><small>{{t "r.secret_once"}}</small></p></div>{{end}}
+{{template "errors" .}}
+<div class="scroll"><table>
+<thead><tr><th>{{t "r.username"}}</th><th>{{t "r.role"}}</th><th>{{t "r.last_login"}}</th><th></th></tr></thead>
+<tbody>
+{{range .Users}}<tr>
+<td><b>{{.Username}}</b>{{if .DisplayName}} <small>{{.DisplayName}}</small>{{end}}{{if .Disabled}} <span class="badge missing">{{t "r.disabled"}}</span>{{end}}</td>
+<td>{{t (print "role." .Role)}}</td>
+<td><small>{{if .LastLoginAt}}{{ago .LastLoginAt}}{{else}}—{{end}}</small></td>
+<td>{{if ne .Username $.User.Username}}<form method="post" action="/responders/users/{{.Username}}" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}">
+<button class="alt sm" type="submit" name="action" value="reset">{{t "r.reset_password"}}</button>
+{{if .Disabled}}<button class="alt sm" type="submit" name="action" value="enable">{{t "r.enable"}}</button>{{else}}<button class="alt sm" type="submit" name="action" value="disable">{{t "r.disable"}}</button>{{end}}
+</form>{{end}}</td>
+</tr>{{end}}
+</tbody></table></div>
+
+<form method="post" action="/responders/users" class="card">
+<h2>{{t "r.add_user"}}</h2>
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<div class="row">
+<div><label for="username">{{t "r.username"}}</label><input id="username" name="username" required maxlength="40" autocapitalize="none" pattern="[a-zA-Z0-9._\-]{2,40}"></div>
+<div><label for="display">{{t "r.display_name"}}</label><input id="display" name="display_name" maxlength="80"></div>
+<div><label for="role">{{t "r.role"}}</label><select id="role" name="role"><option value="responder">{{t "role.responder"}}</option><option value="admin">{{t "role.admin"}}</option></select></div>
+</div>
+<button type="submit">{{t "r.add_user_submit"}}</button>
+<p><small>{{t "r.add_user_help"}}</small></p>
+</form>
+
+<section class="card">
+<h2>{{t "r.tokens_title"}}</h2>
+<p class="muted">{{t "r.tokens_intro"}}</p>
+{{if .Tokens}}<div class="scroll"><table>
+<thead><tr><th>{{t "r.token_name"}}</th><th>{{t "r.token_scope"}}</th><th>{{t "r.last_used"}}</th><th></th></tr></thead>
+<tbody>{{range .Tokens}}<tr><td>{{.Name}}</td><td>{{.Scope}}</td><td><small>{{if .LastUsedAt}}{{ago .LastUsedAt}}{{else}}—{{end}}</small></td>
+<td>{{if .RevokedAt}}<span class="badge">{{t "r.revoked"}}</span>{{else}}<form method="post" action="/responders/tokens/{{.ID}}/revoke" class="inline"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="alt sm" type="submit">{{t "r.revoke"}}</button></form>{{end}}</td></tr>{{end}}</tbody>
+</table></div>{{end}}
+<form method="post" action="/responders/tokens" class="row">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<div><label for="tname">{{t "r.token_name"}}</label><input id="tname" name="name" required maxlength="80" placeholder="Red Cross sync"></div>
+<div><label for="scope">{{t "r.token_scope"}}</label><select id="scope" name="scope"><option value="read">read</option><option value="readwrite">readwrite</option></select></div>
+<button type="submit">{{t "r.token_create"}}</button>
+</form>
+</section>
+{{end}}

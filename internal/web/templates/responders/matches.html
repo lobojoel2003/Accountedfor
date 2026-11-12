@@ -1,0 +1,20 @@
+{{define "content"}}
+<h1>{{t "r.matches_title"}}</h1>
+{{template "rnav" .}}
+<p class="muted">{{t "r.matches_intro"}}</p>
+{{if .Flash}}<p class="flash" role="status">{{.Flash}}</p>{{end}}
+{{range .Matches}}
+<section class="card">
+<p><b>{{tf "r.similarity" (percent .Similarity)}}</b></p>
+<div class="pair">
+<div><span class="badge missing">{{t "badge.missing"}}</span><br><a href="/p/{{.Missing.PublicID}}"><b>{{.Missing.FullName}}</b></a><br><small>{{if .Missing.Age}}{{t "person.age"}} {{.Missing.Age}} · {{end}}{{.Missing.HomeArea}}</small>{{if .MissingMessage}}<p class="quote">{{.MissingMessage}}</p>{{end}}<small>{{if .Missing.AuthorName}}{{tf "r.reported_by" .Missing.AuthorName}} · {{end}}{{ago .Missing.EntryDate}}</small></div>
+<div><span class="badge safe">{{t "badge.safe"}}</span><br><a href="/p/{{.Safe.PublicID}}"><b>{{.Safe.FullName}}</b></a><br><small>{{if .Safe.Age}}{{t "person.age"}} {{.Safe.Age}} · {{end}}{{.Safe.HomeArea}}</small>{{if .SafeMessage}}<p class="quote">{{.SafeMessage}}</p>{{end}}<small>{{t (print "origin." .Safe.Origin)}} · {{ago .Safe.EntryDate}}</small></div>
+</div>
+<form method="post" action="/responders/matches" class="inline">
+<input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="missing" value="{{.Missing.PublicID}}"><input type="hidden" name="safe" value="{{.Safe.PublicID}}">
+<button class="go sm" type="submit" name="action" value="link">{{t "r.match_link"}}</button>
+<button class="alt sm" type="submit" name="action" value="dismiss">{{t "r.match_dismiss"}}</button>
+</form>
+</section>
+{{else}}<p class="card muted">{{t "r.matches_none"}}</p>{{end}}
+{{end}}

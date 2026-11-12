@@ -1,0 +1,27 @@
+{{define "content"}}
+<h1>{{t "r.new_title"}}</h1>
+{{template "rnav" .}}
+<p class="muted">{{t "r.new_intro"}}</p>
+{{template "errors" .}}
+<form method="post" action="/responders/new" class="card">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label for="names">{{t "r.new_names"}}</label>
+<textarea id="names" name="names" required maxlength="5000" rows="4" placeholder="{{t "safe.others_placeholder"}}">{{.Form.Names}}</textarea>
+<div class="row">
+<div><label for="status">{{t "r.status"}}</label><select id="status" name="status">
+<option value="is_note_author">{{t "r.new_safe"}}</option>
+<option value="information_sought">{{t "r.new_missing"}}</option>
+</select></div>
+<div><label for="visibility">{{t "r.visibility"}}</label><select id="visibility" name="visibility">
+<option value="limited">{{t "vis.limited"}}</option>
+<option value="public">{{t "vis.public"}}</option>
+<option value="private">{{t "vis.private"}}</option>
+</select></div>
+</div>
+<label for="location">{{t "r.new_location"}}</label>
+<input id="location" name="location" value="{{.Form.Location}}" maxlength="200" placeholder="{{t "safe.message_placeholder"}}">
+<label for="text">{{t "note.text"}}</label>
+<textarea id="text" name="text" maxlength="1000">{{.Form.Text}}</textarea>
+<button type="submit">{{t "r.new_submit"}}</button>
+</form>
+{{end}}

@@ -1,0 +1,10 @@
+{{define "rnav"}}
+<nav class="tabs" aria-label="{{t "nav.dashboard"}}">
+<a class="btn alt sm" href="/responders">{{t "r.records"}}</a>
+<a class="btn alt sm" href="/responders/matches">{{t "r.matches"}}</a>
+<a class="btn alt sm" href="/responders/new">{{t "r.new"}}</a>
+<a class="btn alt sm" href="/responders/data">{{t "r.data"}}</a>
+{{if .User.IsAdmin}}<a class="btn alt sm" href="/responders/users">{{t "r.users"}}</a><a class="btn alt sm" href="/responders/audit">{{t "r.audit"}}</a>{{end}}
+<form method="post" action="/responders/logout" class="inline"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="alt sm" type="submit">{{tf "r.logout" .User.Name}}</button></form>
+</nav>
+{{end}}
